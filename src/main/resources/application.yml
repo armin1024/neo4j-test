@@ -1,0 +1,6 @@
+spring:
+  data:
+    neo4j:
+      uri: bolt://124.222.126.25:7687
+      username: neo4j
+      password: kandaiming
