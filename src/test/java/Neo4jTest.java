@@ -20,8 +20,8 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import javax.annotation.Resource;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RunWith(SpringRunner.class)
 @ComponentScan("homes.xss.neo4j")
@@ -51,7 +51,7 @@ public class Neo4jTest {
     @Test
     public void testAddNode() {
 //        node();
-        List<HashMap<String, Object>> query = linkRelationRepository.query();
+        List<Map<String, Object>> query = linkRelationRepository.query("match (n:test) delete n;");
         Iterable<GraphNode> all = graphNodeRepository.findAll();
 
     }
