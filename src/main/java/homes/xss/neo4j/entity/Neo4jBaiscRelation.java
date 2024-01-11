@@ -1,11 +1,10 @@
-package homes.xss.neo4j.utils.entity;//节点实体类
+package homes.xss.neo4j.entity;//关系实体类
 import lombok.Data;
 import java.io.Serializable;
-import java.util.List;
 import java.util.Map;
 
 @Data
-public class Neo4jBasicNode implements Serializable {
+public class Neo4jBaiscRelation implements Serializable {
     private static final long serialVersionUID = 1L;
     /**
      * id
@@ -15,7 +14,7 @@ public class Neo4jBasicNode implements Serializable {
     /**
      * 标签
      */
-    private List<String> labels;
+    private String type;
 
     /**
      * 标签属性

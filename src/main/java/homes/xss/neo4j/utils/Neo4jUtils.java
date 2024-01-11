@@ -2,19 +2,18 @@ package homes.xss.neo4j.utils;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import homes.xss.neo4j.utils.dto.Neo4jSaveRelationDTO;
-import homes.xss.neo4j.utils.dto.RelationDTO;
-import homes.xss.neo4j.utils.entity.*;
+import homes.xss.neo4j.dto.Neo4jSaveRelationDTO;
+import homes.xss.neo4j.dto.RelationDTO;
+import homes.xss.neo4j.entity.*;
 import lombok.SneakyThrows;
 import org.apache.commons.collections.IteratorUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.neo4j.driver.Record;
+import org.neo4j.driver.Result;
+import org.neo4j.driver.Session;
 import org.neo4j.driver.internal.InternalPath;
 import org.neo4j.driver.types.Node;
 import org.neo4j.driver.types.Relationship;
-import org.neo4j.ogm.model.Property;
-import org.neo4j.ogm.model.Result;
-import org.neo4j.ogm.response.model.NodeModel;
-import org.neo4j.ogm.session.Session;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
@@ -54,9 +53,10 @@ public class Neo4jUtils {
      */
     public List<String> getAllLabelName() {
         String cypherSql = "match (n) return distinct labels(n) as name";
-        Result query = session.query(cypherSql, new HashMap<>());
+        Result query = session.run(cypherSql, new HashMap<>());
         ArrayList<String> labelNames = new ArrayList<>();
-        for (Map<String, Object> map : query.queryResults()) {
+        for (Record record : query.list()) {
+            Map<String, Object> map = record.asMap();
             String[] names = (String[]) map.get("name");
             for (String name : names) {
                 labelNames.add(name);
@@ -71,9 +71,10 @@ public class Neo4jUtils {
      */
     public List<String> getAllRelationName() {
         String cypherSql = "MATCH ()-[r]-() RETURN distinct type(r) as name";
-        Result query = session.query(cypherSql, new HashMap<>());
+        Result query = session.run(cypherSql, new HashMap<>());
         ArrayList<String> relationNames = new ArrayList<>();
-        for (Map<String, Object> map : query.queryResults()) {
+        for (Record record : query.list()) {
+            Map<String, Object> map = record.asMap();
             relationNames.add(map.get("name").toString());
         }
         return relationNames;
@@ -99,28 +100,28 @@ public class Neo4jUtils {
             }
             cypherSql = String.format("match(n%s%s) return n", labels, property);
         }
-        Result query = session.query(cypherSql, new HashMap<>());
+        Result query = session.run(cypherSql, new HashMap<>());
         //todo result后的数据封装存在问题
-        ArrayList<Neo4jBasicNode> nodeList = new ArrayList<>();
-        Iterable<Map<String, Object>> maps = query.queryResults();
-        for (Map<String, Object> map : maps) {
-            NodeModel queryNode = (NodeModel) map.get("n");
-            Neo4jBasicNode startNodeVo = new Neo4jBasicNode();
-            startNodeVo.setId(queryNode.getId());
-            startNodeVo.setLabels(Arrays.asList(queryNode.getLabels()));
-            List<Property<String, Object>> propertyList = queryNode.getPropertyList();
-            HashMap<String, Object> proMap = new HashMap<>();
-            for (Property<String, Object> stringObjectProperty : propertyList) {
-                if (proMap.containsKey(stringObjectProperty.getKey())) {
-                    throw new RuntimeException("数据重复");
-                }
-                proMap.put(stringObjectProperty.getKey(), stringObjectProperty.getValue());
-            }
-            startNodeVo.setProperty(proMap);
-            nodeList.add(startNodeVo);
-        }
-        session.clear();
-        return nodeList;
+//        ArrayList<Neo4jBasicNode> nodeList = new ArrayList<>();
+//        Iterable<Map<String, Object>> maps = query.queryResults();
+//        for (Map<String, Object> map : maps) {
+//            NodeModel queryNode = (NodeModel) map.get("n");
+//            Neo4jBasicNode startNodeVo = new Neo4jBasicNode();
+//            startNodeVo.setId(queryNode.getId());
+//            startNodeVo.setLabels(Arrays.asList(queryNode.getLabels()));
+//            List<Property<String, Object>> propertyList = queryNode.getPropertyList();
+//            HashMap<String, Object> proMap = new HashMap<>();
+//            for (Property<String, Object> stringObjectProperty : propertyList) {
+//                if (proMap.containsKey(stringObjectProperty.getKey())) {
+//                    throw new RuntimeException("数据重复");
+//                }
+//                proMap.put(stringObjectProperty.getKey(), stringObjectProperty.getValue());
+//            }
+//            startNodeVo.setProperty(proMap);
+//            nodeList.add(startNodeVo);
+//        }
+//        session.clear();
+        return null;
     }
 
     /**
@@ -139,9 +140,9 @@ public class Neo4jUtils {
             property = Neo4jUtils.propertiesMapToPropertiesStr(node.getProperty());
         }
         String cypherSql = String.format("%s(%s%s)", nodup ? "MERGE" : "create", labels, property);
-        Result query = session.query(cypherSql, new HashMap<>());
-        session.clear();
-        return query.queryStatistics().getNodesCreated() > 0;
+        Result query = session.run(cypherSql, new HashMap<>());
+        session.close();
+        return query.consume().counters().labelsAdded() > 0;
     }
 
     /**
@@ -203,9 +204,9 @@ public class Neo4jUtils {
                 return true;
             }
             String addLabelCypherSql =String.format("MERGE (e) with e where id(e)=%s set %s %s return count(e) as count",neo4jBasicNode.getId(),addLabelStr,addPropertyStr);
-            Result query = session.query(addLabelCypherSql, new HashMap<>());
+            Result query = session.run(addLabelCypherSql, new HashMap<>());
             System.out.println("跟新了："+neo4jBasicNode.getId());
-            session.clear();
+            session.close();
         }
         //创建不重复节点
         return true;
@@ -217,7 +218,7 @@ public class Neo4jUtils {
      * @return 创建成功条数
      *
      */
-    public Long batchCreateNode(List<Neo4jBasicNode> nodeList) {
+    public Integer batchCreateNode(List<Neo4jBasicNode> nodeList) {
         return this.batchCreateNode(nodeList, false);
     }
 
@@ -227,7 +228,7 @@ public class Neo4jUtils {
      * @param nodup    是否去重。 true去重（存在的节点将不会被创建） false不去重
      * @return 创建成功条数
      */
-    public Long batchCreateNode(List<Neo4jBasicNode> nodeList, Boolean nodup) {
+    public Integer batchCreateNode(List<Neo4jBasicNode> nodeList, Boolean nodup) {
       ArrayList<Neo4jBasicNode> addNode = new ArrayList<>();
         //去重，验证
         if (nodup){
@@ -272,10 +273,10 @@ public class Neo4jUtils {
         }
         cypherSql += String.join(",", content);
         if (content.size() == 0) {
-            return 0L;
+            return 0;
         }
-        Result query = session.query(cypherSql, new HashMap<>());
-        return Long.valueOf(query.queryStatistics().getNodesCreated());
+        Result query = session.run(cypherSql, new HashMap<>());
+        return query.consume().counters().nodesCreated();
     }
 
 
@@ -306,9 +307,9 @@ public class Neo4jUtils {
             //删除不存在关系的节点
             cypherSql += " where not exists((n)-[]-()) DELETE n";
         }
-        Result query = session.query(cypherSql, new HashMap<>());
-        session.clear();
-        return query.queryStatistics().getNodesDeleted();
+        Result query = session.run(cypherSql, new HashMap<>());
+        session.close();
+        return query.consume().counters().nodesDeleted();
     }
 
     /**
@@ -381,9 +382,9 @@ public class Neo4jUtils {
             relationProperty = Neo4jUtils.propertiesMapToPropertiesStr(saveRelation.getRelationship().getProperty());
         }
         cypherSql = String.format("MATCH (start%s%s) %s with start MATCH (end%s%s) %s MERGE (start)-[rep%s%s]->(end)", startLable, startProperty, startWhere, endLable, endProperty, endWhere, relationType, relationProperty);
-        Result query = session.query(cypherSql, new HashMap<>());
-        session.clear();
-        return query.queryStatistics().getRelationshipsCreated();
+        Result query = session.run(cypherSql, new HashMap<>());
+        session.close();
+        return query.consume().counters().relationshipsCreated();
     }
 
     /**
@@ -422,9 +423,9 @@ public class Neo4jUtils {
             relationProperty = Neo4jUtils.propertiesMapToPropertiesStr(saveRelation.getRelationship().getProperty());
         }
         cypherSql = String.format("MERGE (start%s%s)-[rep%s%s]->(end%s%s)", startLable, startProperty, relationType, relationProperty, endLable, endProperty);
-        Result query = session.query(cypherSql, new HashMap<>());
-        session.clear();
-        return query.queryStatistics().getRelationshipsCreated() > 0;
+        Result query = session.run(cypherSql, new HashMap<>());
+        session.close();
+        return query.consume().counters().relationshipsCreated() > 0;
     }
 
     /**
@@ -439,18 +440,18 @@ public class Neo4jUtils {
         String cypherSql = String.format("MATCH p=(a%s%s)-[r%s%s]->(b%s%s)-[*0..%s]->() RETURN p", relationVO.getStartLabelName(), relationVO.getStartNodeProperties(), relationVO.getRelationLabelName(), relationVO.getRelationProperties(), relationVO.getEndLabelName(), relationVO.getEndNodeProperties(), relationVO.getLevel());
         System.out.println(cypherSql);
         long startTime = System.currentTimeMillis();
-        Result query = session.query(cypherSql, new HashMap<>());
+        Result query = session.run(cypherSql, new HashMap<>());
         System.out.println(String.format("耗时%d秒", System.currentTimeMillis() - startTime));
 
-        Iterable<Map<String, Object>> maps = query.queryResults();
         ArrayList<Neo4jBasicRelationReturnVO> returnList = new ArrayList<>();
-        for (Map<String, Object> map : maps) {
+        for (Record record : query.list()) {
+            Map<String, Object> map = record.asMap();
             InternalPath.SelfContainedSegment[] ps = (InternalPath.SelfContainedSegment[]) map.get("p");
             for (InternalPath.SelfContainedSegment p : ps) {
                 returnList.add(changeToNeo4jBasicRelationReturnVO(p));
             }
         }
-        session.clear();
+        session.close();
         return returnList;
     }
     /**

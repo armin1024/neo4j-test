@@ -1,4 +1,4 @@
-package homes.xss.neo4j.utils.entity;//查询关系的时候返回的对象封装的实体类
+package homes.xss.neo4j.entity;//查询关系的时候返回的对象封装的实体类
 import lombok.Data;
 import java.io.Serializable;
 import java.util.Map;

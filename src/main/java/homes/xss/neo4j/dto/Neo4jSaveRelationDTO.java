@@ -1,7 +1,7 @@
-package homes.xss.neo4j.utils.dto;
+package homes.xss.neo4j.dto;
 
-import homes.xss.neo4j.utils.entity.Neo4jBaiscRelation;
-import homes.xss.neo4j.utils.entity.Neo4jBasicNode;
+import homes.xss.neo4j.entity.Neo4jBaiscRelation;
+import homes.xss.neo4j.entity.Neo4jBasicNode;
 import lombok.Data;
 
 import java.io.Serializable;

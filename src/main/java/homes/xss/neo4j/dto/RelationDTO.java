@@ -1,4 +1,4 @@
-package homes.xss.neo4j.utils.dto;
+package homes.xss.neo4j.dto;
 
 import lombok.Data;
 
