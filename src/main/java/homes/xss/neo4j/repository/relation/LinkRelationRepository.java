@@ -29,4 +29,9 @@ public interface LinkRelationRepository extends Neo4jRepository<LinkRelation, Lo
             "RETURN a, rel, b;\n")
     List<Map<String, Object>> query(@Param("uri") String uri);
 
+//    @Query("match ()-[r:link]->() where r.uri=$uri return r")
+//    List<Map<String, Object>> queryRelation(@Param("uri") String uri);
+
+//    @Query("create (n:$label) return n")
+//    Map<String, Object> testSave(@Param("label") String label, @Param("map") Map<String, Object> map);
 }

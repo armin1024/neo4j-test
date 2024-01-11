@@ -3,15 +3,14 @@ import homes.xss.neo4j.node.GraphNode;
 import homes.xss.neo4j.node.SecLeftNode;
 import homes.xss.neo4j.node.SecNode;
 import homes.xss.neo4j.node.SecRightNode;
-import homes.xss.neo4j.relation.GraphRelation;
-import homes.xss.neo4j.relation.LeftSecRelation;
 import homes.xss.neo4j.relation.LinkRelation;
-import homes.xss.neo4j.relation.SecLeftRelation;
 import homes.xss.neo4j.repository.node.GraphNodeRepository;
 import homes.xss.neo4j.repository.node.SecLeftNodeRepository;
 import homes.xss.neo4j.repository.node.SecNodeRepository;
 import homes.xss.neo4j.repository.node.SecRightNodeRepository;
 import homes.xss.neo4j.repository.relation.*;
+import homes.xss.neo4j.utils.Neo4jUtils;
+import homes.xss.neo4j.utils.entity.Neo4jBasicNode;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,6 +19,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import javax.annotation.Resource;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -47,11 +47,26 @@ public class Neo4jTest {
     private SecRightRelationRepository secRightRelationRepository;
     @Resource
     private LinkRelationRepository linkRelationRepository;
+    @Resource
+    private Neo4jUtils neo4jUtils;
 
     @Test
     public void testAddNode() {
 //        node();
-        List<Map<String, Object>> query = linkRelationRepository.query("match (n:test) delete n;");
+        List<Map<String, Object>> query = linkRelationRepository.query("/aops");
+//        List<Map<String, Object>> relation = linkRelationRepository.queryRelation("/aops");
+
+        HashMap<String, Object> stringObjectHashMap = new HashMap<>();
+        stringObjectHashMap.put("uri", "/sec/secops/form");
+//        stringObjectHashMap.put("age", 10);
+        System.out.println(Neo4jUtils.propertiesMapToPropertiesStr(stringObjectHashMap));
+        Neo4jBasicNode node = new Neo4jBasicNode();
+        node.setLabels(Arrays.asList("graph_node"));
+        node.setProperty(stringObjectHashMap);
+//        boolean node1 = neo4jUtils.createNode(node, true);// true在list中的node完全相同时生效，如果追加了一条新的数据，list中所有的node都会从新添加一遍
+//        System.out.println(node1);
+        List<Neo4jBasicNode> neo4jBasicNodes = neo4jUtils.queryNode(node);
+        System.out.println(neo4jBasicNodes);
         Iterable<GraphNode> all = graphNodeRepository.findAll();
 
     }
